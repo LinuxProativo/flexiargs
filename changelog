@@ -1,0 +1,9 @@
+Fri May 15 11:05:59 -03 2026:
+    - Rule-based parsing: maps arguments directly to local variables or closures.
+    - Thread-safe integration: native support for RwLock targets via rw_bool, rw_set, and rw_value.
+    - Strict depth control: adjustable validation levels with strict, strict_level, and strict_first.
+    - Flexible action results: supports closures returning () or Result via IntoActionResult trait.
+    - Positional tracking: manages unmatched arguments with original input index tracking.
+    - Standardized reporting: consistent error messages for invalid or missing arguments.
+    - Advanced collection: support for list collection and optional value extraction.
+    - Clean API: modular design with chainable result handling.
