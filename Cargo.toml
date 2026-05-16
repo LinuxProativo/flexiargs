@@ -9,6 +9,6 @@ documentation = "https://docs.rs/flexiargs/"
 homepage = "https://github.com/LinuxProativo/flexiargs"
 repository = "https://github.com/LinuxProativo/flexiargs"
 readme = "README.md"
-keywords = ["args", "parser", "command-dispatcher", "strict"]
+keywords = ["args", "arguments", "parse", "parser", "cli"]
 categories = ["command-line-interface", "parsing"]
 exclude = ["logo.png"]
