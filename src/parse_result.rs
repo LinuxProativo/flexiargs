@@ -20,12 +20,14 @@ pub struct ParseResult<'a> {
     pub remaining: VecDeque<String>,
     /// The original input positions of the arguments stored in `remaining`.
     pub arg_indices: Vec<usize>,
+    /// Internal flag indicating if a core parameter was missing.
+    pub essential_failed: bool,
 }
 
 impl<'a> ParseResult<'a> {
     /// Zero-tolerance mode: Any unmatched argument in `remaining` will trigger an error.
     pub fn strict(mut self) -> Self {
-        if self.res.is_err() {
+        if self.res.is_err() && !self.essential_failed {
             return self;
         }
 
@@ -41,7 +43,7 @@ impl<'a> ParseResult<'a> {
     /// * `n` - The positional threshold. Any unmatched argument at or before this position
     ///         triggers an error. Arguments appearing after this position are allowed.
     pub fn strict_level(mut self, n: usize) -> Self {
-        if self.res.is_err() {
+        if self.res.is_err() && !self.essential_failed {
             return self;
         }
 

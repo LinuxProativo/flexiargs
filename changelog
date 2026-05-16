@@ -1,3 +1,5 @@
+Sat May 16 13:33:02 -03 2026:
+    - Fixed a conflict where missing essential arguments incorrectly masked strict validation errors.
 Fri May 15 11:05:59 -03 2026:
     - Rule-based parsing: maps arguments directly to local variables or closures.
     - Thread-safe integration: native support for RwLock targets via rw_bool, rw_set, and rw_value.

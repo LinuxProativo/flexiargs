@@ -377,18 +377,21 @@ pub fn parse_into_vars<'a>(
                 }
             }
         }
-
-        if has_essentials && !essential_met && !is_empty {
-            return Err(missing_arg(subcommand, true));
-        }
         Ok(())
     })();
 
-    ParseResult {
+    let mut parse_result = ParseResult {
         sub: subcommand,
         empty: is_empty,
         res: result,
         remaining,
         arg_indices,
+        essential_failed: has_essentials && !essential_met && !is_empty,
+    };
+
+    if parse_result.res.is_ok() && parse_result.essential_failed {
+        parse_result.res = Err(missing_arg(subcommand, true));
     }
+
+    parse_result
 }
