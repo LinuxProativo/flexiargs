@@ -9,7 +9,7 @@ use std::error::Error;
 ///
 /// # Returns
 /// A `String` containing the binary name.
-fn get_app_name() -> String {
+pub(crate) fn get_app_name() -> String {
     std::env::current_exe()
         .unwrap_or_default()
         .file_name()
