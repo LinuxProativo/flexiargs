@@ -3,6 +3,8 @@
 //! This module defines the structures and functions necessary to map command-line
 //! arguments to application variables using a rule-based system.
 
+use crate::ArgHelp;
+use crate::help::print_help;
 use crate::into_result::IntoActionResult;
 use crate::messages::{invalid_arg, missing_arg, parse_value};
 use crate::parse_result::ParseResult;
@@ -11,7 +13,7 @@ use std::error::Error;
 use std::str::FromStr;
 use std::sync::RwLock;
 
-/// todo 
+/// Represents an empty or null value placeholder for argument configurations.
 pub static NULL_PTR: &str = "";
 
 /// Defines the action to be taken for a matched argument.
@@ -52,7 +54,7 @@ impl<'a> Arg<'a> {
         Self {
             short: s,
             long: l,
-            error_name: "",
+            error_name: NULL_PTR,
             action: ArgAction::Bool(target),
             essential: false,
         }
@@ -71,7 +73,7 @@ impl<'a> Arg<'a> {
         Self {
             short: s,
             long: l,
-            error_name: "",
+            error_name: NULL_PTR,
             action: ArgAction::RwLockBool(target),
             essential: false,
         }
@@ -96,7 +98,7 @@ impl<'a> Arg<'a> {
         Self {
             short: s,
             long: l,
-            error_name: "",
+            error_name: NULL_PTR,
             action: ArgAction::Value(Box::new(closure)),
             essential: false,
         }
@@ -161,7 +163,7 @@ impl<'a> Arg<'a> {
         Self {
             short: s,
             long: l,
-            error_name: "",
+            error_name: NULL_PTR,
             action: ArgAction::Value(Box::new(closure)),
             essential: false,
         }
@@ -309,7 +311,7 @@ impl<'a> Arg<'a> {
         Self {
             short: s,
             long: l,
-            error_name: "",
+            error_name: NULL_PTR,
             action: ArgAction::Value(Box::new(closure)),
             essential: false,
         }
@@ -328,8 +330,40 @@ impl<'a> Arg<'a> {
 pub fn parse_into_vars<'a>(
     subcommand: &'a str,
     rules: &mut [Arg],
+    help_rules: &[ArgHelp<'a>],
     mut args: VecDeque<String>,
 ) -> ParseResult<'a> {
+    let mut help_requested = false;
+    let mut version_requested = false;
+
+    if let Some(arg) = args.front() {
+        if arg == "--help" || arg == "-h" {
+            help_requested = true;
+        } else if arg == "--version" || arg == "-V" {
+            version_requested = true;
+        }
+    }
+
+    if help_requested || version_requested {
+        let props = help_rules.iter().find_map(|r| r.properties.as_ref());
+
+        if version_requested {
+            println!("{}", props.map(|p| p.version).unwrap_or("0.1.0"));
+        } else {
+            print_help(subcommand, props, rules, help_rules);
+        }
+
+        return ParseResult {
+            sub: subcommand,
+            empty: true,
+            res: Ok(()),
+            remaining: VecDeque::new(),
+            arg_indices: Vec::new(),
+            essential_failed: false,
+            help_requested: true,
+        };
+    }
+
     let is_empty = args.is_empty();
     let mut essential_met = false;
     let mut positional_only = false;
@@ -390,6 +424,7 @@ pub fn parse_into_vars<'a>(
         remaining,
         arg_indices,
         essential_failed: has_essentials && !essential_met && !is_empty,
+        help_requested: false,
     };
 
     if parse_result.res.is_ok() && parse_result.essential_failed {
