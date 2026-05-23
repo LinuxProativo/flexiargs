@@ -335,22 +335,27 @@ pub fn parse_into_vars<'a>(
 ) -> ParseResult<'a> {
     let mut help_requested = false;
     let mut version_requested = false;
+    let mut help_all_requested = false;
 
     if let Some(arg) = args.front() {
         if arg == "--help" || arg == "-h" {
             help_requested = true;
         } else if arg == "--version" || arg == "-V" {
             version_requested = true;
+        } else if arg == "--help-all" {
+            help_all_requested = true;
         }
     }
 
-    if help_requested || version_requested {
+    if help_requested || version_requested || help_all_requested {
         let props = help_rules.iter().find_map(|r| r.properties.as_ref());
 
         if version_requested {
             println!("{}", props.map(|p| p.version).unwrap_or("0.1.0"));
+        } else if help_all_requested {
+            print_help(subcommand, props, rules, help_rules, true);
         } else {
-            print_help(subcommand, props, rules, help_rules);
+            print_help(subcommand, props, rules, help_rules, false);
         }
 
         return ParseResult {
