@@ -5,6 +5,7 @@
 
 use crate::messages::get_app_name;
 use crate::{Arg, NULL_PTR};
+use std::collections::BTreeMap;
 
 ///
 pub struct AppProperties<'a> {
@@ -44,6 +45,7 @@ impl<'a> ArgHelp<'a> {
                 desc,
                 version: ver,
             }),
+            context: &[],
         }
     }
 
@@ -55,7 +57,13 @@ impl<'a> ArgHelp<'a> {
             desc,
             is_subcommand: false,
             properties: None,
+            context: &[],
         }
+    }
+
+    pub const fn with_context(mut self, context: &'a [&'a str]) -> Self {
+        self.context = context;
+        self
     }
 
     /// todo descrição argumento
@@ -66,6 +74,7 @@ impl<'a> ArgHelp<'a> {
             desc,
             is_subcommand: true,
             properties: None,
+            context: &[],
         }
     }
 }
@@ -77,8 +86,10 @@ pub(crate) fn print_help(
     props: Option<&AppProperties>,
     rules: &[Arg],
     help_rules: &[ArgHelp],
+    is_all: bool,
 ) {
     let app_name = get_app_name();
+    let mut grouped: BTreeMap<&str, Vec<&ArgHelp>> = BTreeMap::new();
 
     if let Some(p) = props {
         println!("{} - {}\n\n{}\n", app_name, p.name, p.desc);
@@ -86,20 +97,24 @@ pub(crate) fn print_help(
         println!("{}\n", app_name);
     }
 
-    let active_help: Vec<&ArgHelp> = help_rules
-        .iter()
-        .filter(|h| {
-            rules.iter().any(|r| {
-                let long_match = r.long.split('|').any(|part| part == h.long);
-                let short_match = match (h.short, r.short) {
-                    (Some(h_short), Some(r_short)) => h_short == r_short,
-                    (None, _) => true,
-                    (Some(_), None) => false,
-                };
-                long_match && short_match
+    let active_help: Vec<&ArgHelp> = if is_all {
+        help_rules.iter().collect()
+    } else {
+        help_rules
+            .iter()
+            .filter(|h| {
+                rules.iter().any(|r| {
+                    let long_match = r.long.split('|').any(|part| part == h.long);
+                    let short_match = match (h.short, r.short) {
+                        (Some(h_short), Some(r_short)) => h_short == r_short,
+                        (None, _) => true,
+                        (Some(_), None) => false,
+                    };
+                    long_match && short_match
+                })
             })
-        })
-        .collect();
+            .collect()
+    };
 
     let subcommands: Vec<&&ArgHelp> = active_help.iter().filter(|h| h.is_subcommand).collect();
     let sub_placeholder = if !subcommands.is_empty() {
@@ -113,7 +128,7 @@ pub(crate) fn print_help(
         &format!("{} ", sub)
     };
 
-    println!("Usage: {} {}[OPTIONS]", app_name, place,);
+    println!("Usage: {} {}[OPTIONS]", app_name, place);
 
     if !subcommands.is_empty() {
         println!("\nSubcommands:");
@@ -126,15 +141,45 @@ pub(crate) fn print_help(
         }
     }
 
-    let options: Vec<&&ArgHelp> = active_help.iter().filter(|h| !h.is_subcommand).collect();
-    if !options.is_empty() {
-        println!("\nOptions:");
-        for help in options {
-            let flag = match help.short {
-                Some(s) => format!("{:>2}, {}", s, help.long),
-                None => format!("{:>4}{}", NULL_PTR, help.long),
-            };
-            println!("  {:<30}{}", flag, help.desc);
+    for help in &active_help {
+        if help.is_subcommand {
+            continue;
+        }
+
+        if !is_all || help.context.is_empty() {
+            grouped.entry("").or_default().push(help);
+        } else {
+            for ctx in help.context {
+                grouped.entry(ctx).or_default().push(help);
+            }
+        }
+    }
+
+    for (ctx, items) in grouped {
+        let subs: Vec<_> = items.iter().filter(|i| i.is_subcommand).cloned().collect();
+        let opts: Vec<_> = items.iter().filter(|i| !i.is_subcommand).cloned().collect();
+
+        if !subs.is_empty() {
+            println!("\nSubcommands:");
+            for h in subs {
+                let flag = match h.short {
+                    Some(s) => format!("{:>2}, {}", s, h.long),
+                    None => format!("{:>4}{}", NULL_PTR, h.long),
+                };
+                println!("  {:<30}{}", flag, h.desc);
+            }
+        }
+
+        if !opts.is_empty() {
+            let text = &format!(" for '{}'", ctx);
+            println!("\nOptions{}:", if ctx.is_empty() { "" } else { text });
+            for h in opts {
+                let flag = match h.short {
+                    Some(s) => format!("{:>2}, {}", s, h.long),
+                    None => format!("{:>4}{}", NULL_PTR, h.long),
+                };
+                println!("  {:<30}{}", flag, h.desc);
+            }
         }
     }
 
