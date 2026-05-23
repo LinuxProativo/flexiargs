@@ -29,6 +29,7 @@ pub struct ArgHelp<'a> {
     pub is_subcommand: bool,
     ///
     pub properties: Option<AppProperties<'a>>,
+    pub context: &'a [&'a str],
 }
 
 /// todo descrição
