@@ -123,7 +123,7 @@ pub(crate) fn print_help(
         println!("{}\n", app_name);
     }
 
-    let active_help: Vec<&ArgHelp> = if is_all {
+    let act: Vec<&ArgHelp> = if is_all {
         help_rules.iter().collect()
     } else {
         help_rules
@@ -142,32 +142,26 @@ pub(crate) fn print_help(
             .collect()
     };
 
-    let subcommands: Vec<&&ArgHelp> = active_help.iter().filter(|h| h.is_subcommand).collect();
-    let sub_placeholder = if !subcommands.is_empty() {
+    let scmd: Vec<&ArgHelp> = act.iter().filter(|h| h.is_subcommand).cloned().collect();
+    let sub_place = if !scmd.is_empty() {
         "[SUBCOMMAND] "
     } else {
-        ""
+        NULL_PTR
     };
     let place = if sub.is_empty() {
-        sub_placeholder
+        sub_place
     } else {
         &format!("{} ", sub)
     };
 
     println!("Usage: {} {}[OPTIONS]", app_name, place);
 
-    if !subcommands.is_empty() {
+    if !scmd.is_empty() {
         println!("\nSubcommands:");
-        for h in subcommands {
-            let flag = match h.short {
-                Some(s) => format!("{:>2}, {}", s, h.long),
-                None => format!("{:>4}{}", NULL_PTR, h.long),
-            };
-            println!("  {:<30}{}", flag, h.desc);
-        }
+        print_entries(&scmd);
     }
 
-    for help in &active_help {
+    for help in &act {
         if help.is_subcommand {
             continue;
         }
@@ -187,25 +181,13 @@ pub(crate) fn print_help(
 
         if !subs.is_empty() {
             println!("\nSubcommands:");
-            for h in subs {
-                let flag = match h.short {
-                    Some(s) => format!("{:>2}, {}", s, h.long),
-                    None => format!("{:>4}{}", NULL_PTR, h.long),
-                };
-                println!("  {:<30}{}", flag, h.desc);
-            }
+            print_entries(&subs);
         }
 
         if !opts.is_empty() {
             let text = &format!(" for '{}'", ctx);
             println!("\nOptions{}:", if ctx.is_empty() { "" } else { text });
-            for h in opts {
-                let flag = match h.short {
-                    Some(s) => format!("{:>2}, {}", s, h.long),
-                    None => format!("{:>4}{}", NULL_PTR, h.long),
-                };
-                println!("  {:<30}{}", flag, h.desc);
-            }
+            print_entries(&opts);
         }
     }
 
@@ -213,4 +195,18 @@ pub(crate) fn print_help(
     println!("  {:<30}Show this help message", "-h, --help");
     println!("  {:<30}Show this all help message", "    --help-all");
     println!("  {:<30}Show version", "-V, --version");
+}
+
+/// Helper function to format and print a help entry consistently.
+///
+/// # Arguments
+/// * `h` - The `ArgHelp` entry to display.
+fn print_entries(items: &[&ArgHelp]) {
+    for h in items {
+        let flag = match h.short {
+            Some(s) => format!("{:>2}, {}", s, h.long),
+            None => format!("{:>4}{}", NULL_PTR, h.long),
+        };
+        println!("  {:<30}{}", flag, h.desc);
+    }
 }
