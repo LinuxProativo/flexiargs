@@ -22,9 +22,16 @@ pub struct ParseResult<'a> {
     pub arg_indices: Vec<usize>,
     /// Internal flag indicating if a core parameter was missing.
     pub essential_failed: bool,
+    /// Indicates if the help flag was requested by the user.
+    pub help_requested: bool,
 }
 
 impl<'a> ParseResult<'a> {
+    /// Returns true if the user requested help information.
+    pub fn help_requested(&self) -> bool {
+        self.help_requested
+    }
+
     /// Zero-tolerance mode: Any unmatched argument in `remaining` will trigger an error.
     pub fn strict(mut self) -> Self {
         if self.res.is_err() && !self.essential_failed {
