@@ -11,6 +11,9 @@ use std::error::Error;
 use std::str::FromStr;
 use std::sync::RwLock;
 
+/// todo 
+pub static NULL_PTR: &str = "";
+
 /// Defines the action to be taken for a matched argument.
 pub enum ArgAction<'a> {
     /// Simply sets a boolean flag to true.
