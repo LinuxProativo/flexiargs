@@ -25,8 +25,9 @@ fn test_setup_parsing_success() -> Result<(), Box<dyn std::error::Error>> {
             Arg::value(Some("-R"), "--rootfs", "directory", &mut rootfs),
         ];
 
+        let help_rules = [];
         let deque: VecDeque<String> = input_args.into();
-        parse_into_vars("setup", &mut rules, deque).ok()?;
+        parse_into_vars("setup", &mut rules, &help_rules, deque).ok()?;
     }
 
     assert!(edge);
