@@ -56,7 +56,7 @@ pub use messages::{invalid_arg, missing_arg};
 pub use help::ArgHelp;
 
 /// Re-exports core parsing logic and argument rule definitions.
-pub use flexiargs::{Arg, parse_into_vars};
+pub use flexiargs::{Arg, NULL_PTR, parse_into_vars};
 
 #[cfg(test)]
 mod tests;
