@@ -7,34 +7,39 @@ use crate::messages::get_app_name;
 use crate::{Arg, NULL_PTR};
 use std::collections::BTreeMap;
 
-///
+/// Holds metadata about the application for help display.
 pub struct AppProperties<'a> {
-    ///
+    /// The name of the application.
     pub name: &'a str,
-    ///
+    /// A short description of the application.
     pub desc: &'a str,
-    ///
+    /// The application version string.
     pub version: &'a str,
 }
 
-/// todo completar descrição
+/// Defines documentation metadata for a command-line argument or subcommand.
 pub struct ArgHelp<'a> {
-    ///
+    /// The short flag version (e.g., Some("-v")).
     pub short: Option<&'a str>,
-    ///
+    /// The long flag version or command name (e.g., "--version").
     pub long: &'a str,
-    ///
+    /// A brief description of the argument's purpose.
     pub desc: &'a str,
-    ///
+    /// Whether this item represents a subcommand.
     pub is_subcommand: bool,
-    ///
+    /// Optional application properties, usually defined for the main command.
     pub properties: Option<AppProperties<'a>>,
+    /// Contexts (subcommands) in which this argument is available.
     pub context: &'a [&'a str],
 }
 
-/// todo descrição
 impl<'a> ArgHelp<'a> {
-    /// todo descrição argumento
+    /// Creates a new entry containing application properties.
+    ///
+    /// # Arguments
+    /// * `name` - The application name.
+    /// * `desc` - The application description.
+    /// * `ver` - The application version.
     pub const fn properties(name: &'a str, desc: &'a str, ver: &'a str) -> Self {
         Self {
             short: None,
@@ -50,7 +55,12 @@ impl<'a> ArgHelp<'a> {
         }
     }
 
-    /// todo descrição argumento
+    /// Creates a new argument definition.
+    ///
+    /// # Arguments
+    /// * `short` - Optional short flag (e.g., Some("-f")).
+    /// * `long` - The long flag version (e.g., "--file").
+    /// * `desc` - Description of the argument.
     pub const fn arg(short: Option<&'a str>, long: &'a str, desc: &'a str) -> Self {
         Self {
             short,
@@ -62,12 +72,21 @@ impl<'a> ArgHelp<'a> {
         }
     }
 
+    /// Sets the contexts (subcommands) for this argument, used for grouping in --help-all.
+    ///
+    /// # Arguments
+    /// * `context` - A slice of subcommand names where this argument is valid.
     pub const fn with_context(mut self, context: &'a [&'a str]) -> Self {
         self.context = context;
         self
     }
 
-    /// todo descrição argumento
+    /// Creates a new subcommand definition.
+    ///
+    /// # Arguments
+    /// * `short` - Optional short flag.
+    /// * `long` - The command name.
+    /// * `desc` - Description of the command.
     pub const fn subcommand(short: Option<&'a str>, long: &'a str, desc: &'a str) -> Self {
         Self {
             short,
@@ -80,8 +99,14 @@ impl<'a> ArgHelp<'a> {
     }
 }
 
-/// Prints the help information based on the provided rules.
-/// todo completar argumento
+/// Prints the formatted help information to the console based on the provided rules.
+///
+/// # Arguments
+/// * `sub` - The current active subcommand context.
+/// * `props` - Optional application properties.
+/// * `rules` - The list of active command arguments.
+/// * `help_rules` - The full list of documented rules.
+/// * `is_all` - If true, lists all documented arguments regardless of active rules.
 pub(crate) fn print_help(
     sub: &str,
     props: Option<&AppProperties>,
@@ -133,12 +158,12 @@ pub(crate) fn print_help(
 
     if !subcommands.is_empty() {
         println!("\nSubcommands:");
-        for help in subcommands {
-            let flag = match help.short {
-                Some(s) => format!("{:>2}, {}", s, help.long),
-                None => format!("{:>4}{}", NULL_PTR, help.long),
+        for h in subcommands {
+            let flag = match h.short {
+                Some(s) => format!("{:>2}, {}", s, h.long),
+                None => format!("{:>4}{}", NULL_PTR, h.long),
             };
-            println!("  {:<30}{}", flag, help.desc);
+            println!("  {:<30}{}", flag, h.desc);
         }
     }
 
