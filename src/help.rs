@@ -21,13 +21,16 @@ pub struct AppProperties<'a> {
 pub struct ArgHelp<'a> {
     /// The short flag version (e.g., Some("-v")).
     pub short: Option<&'a str>,
-    /// The long flag version or command name (e.g., "--version").
+    /// The long flag version, command name, or environment variable name.
     pub long: &'a str,
-    /// A brief description of the argument's purpose.
+    /// A brief description of the item's purpose.
     pub desc: &'a str,
+    /// Optional metadata string to display alongside the long flag (e.g., "<VAL>").
     pub meta: Option<&'a str>,
     /// Whether this item represents a subcommand.
     pub is_subcommand: bool,
+    /// Whether this item represents an environment variable.
+    pub is_env: bool,
     /// Optional application properties, usually defined for the main command.
     pub properties: Option<AppProperties<'a>>,
     /// Contexts (subcommands) in which this argument is available.
@@ -48,6 +51,7 @@ impl<'a> ArgHelp<'a> {
             desc: NULL_PTR,
             meta: None,
             is_subcommand: false,
+            is_env: false,
             properties: Some(AppProperties {
                 name,
                 desc,
@@ -69,24 +73,29 @@ impl<'a> ArgHelp<'a> {
             long,
             desc,
             meta: None,
+            is_env: false,
             is_subcommand: false,
             properties: None,
             context: &[],
         }
     }
 
-    /// Sets the contexts (subcommands) for this argument, used for grouping in --help-all.
+    /// Creates a new environment variable documentation entry.
     ///
     /// # Arguments
-    /// * `context` - A slice of subcommand names where this argument is valid.
-    pub const fn context(mut self, context: &'a [&'a str]) -> Self {
-        self.context = context;
-        self
-    }
-
-    pub const fn meta(mut self, meta: &'a str) -> Self {
-        self.meta = Some(meta);
-        self
+    /// * `var` - The environment variable name (e.g., "ALPACK_HOME").
+    /// * `desc` - Description of what the variable controls.
+    pub const fn env(var: &'a str, desc: &'a str) -> Self {
+        Self {
+            short: None,
+            long: var,
+            desc,
+            meta: None,
+            is_subcommand: false,
+            is_env: true,
+            properties: None,
+            context: &[],
+        }
     }
 
     /// Creates a new subcommand definition.
@@ -101,10 +110,29 @@ impl<'a> ArgHelp<'a> {
             long,
             desc,
             meta: None,
+            is_env: false,
             is_subcommand: true,
             properties: None,
             context: &[],
         }
+    }
+
+    /// Sets the contexts (subcommands) for this argument, used for grouping in --help-all.
+    ///
+    /// # Arguments
+    /// * `context` - A slice of subcommand names where this argument is valid.
+    pub const fn context(mut self, context: &'a [&'a str]) -> Self {
+        self.context = context;
+        self
+    }
+
+    /// Sets the metadata string (e.g., "<DIR>").
+    ///
+    /// # Arguments
+    /// * `meta` - The string representing the expected value type.
+    pub const fn meta(mut self, meta: &'a str) -> Self {
+        self.meta = Some(meta);
+        self
     }
 }
 
@@ -214,6 +242,12 @@ pub(crate) fn print_help(
     println!("  {:<30}Show this help message", "-h, --help");
     println!("  {:<30}Show this all help message", "    --help-all");
     println!("  {:<30}Show version", "-V, --version");
+
+    let envs: Vec<&ArgHelp> = act.iter().filter(|h| h.is_env).cloned().collect();
+    if !envs.is_empty() {
+        println!("\nEnvironment Variables:");
+        print_entries(&envs);
+    }
 }
 
 /// Helper function to format and print a help entry consistently.
@@ -232,6 +266,6 @@ fn print_entries(items: &[&ArgHelp]) {
             None => format!("{:>4}{}", NULL_PTR, display_long),
         };
 
-        println!("  {:<30}{}", flag, h.desc);
+        println!("  {:<28}  {}", flag, h.desc);
     }
 }
