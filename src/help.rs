@@ -203,10 +203,16 @@ pub(crate) fn print_help(
 /// * `h` - The `ArgHelp` entry to display.
 fn print_entries(items: &[&ArgHelp]) {
     for h in items {
-        let flag = match h.short {
-            Some(s) => format!("{:>2}, {}", s, h.long),
-            None => format!("{:>4}{}", NULL_PTR, h.long),
+        let display_long = match h.meta {
+            Some(m) => format!("{} {}", h.long, m),
+            None => h.long.to_string(),
         };
+
+        let flag = match h.short {
+            Some(s) => format!("{:>2}, {}", s, display_long),
+            None => format!("{:>4}{}", NULL_PTR, display_long),
+        };
+
         println!("  {:<30}{}", flag, h.desc);
     }
 }
