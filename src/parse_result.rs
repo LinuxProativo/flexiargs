@@ -4,9 +4,10 @@
 //! It provides a fluent API for enforcing validation rules (strictness) and
 //! managing arguments that were not matched during the parsing phase.
 
+use crate::{invalid_arg, missing_arg};
 use std::collections::VecDeque;
 use std::error::Error;
-use crate::{invalid_arg, missing_arg};
+use std::io;
 
 /// Holds the outcome of the parsing operation.
 pub struct ParseResult<'a> {
@@ -84,15 +85,16 @@ impl<'a> ParseResult<'a> {
     /// # Returns
     /// An error if the input was empty, otherwise returns the parsing result.
     pub fn require_args(self) -> Result<Self, Box<dyn Error>> {
+        if self.help_requested {
+            return Ok(self);
+        }
+
         if self.empty {
             return Err(missing_arg(self.sub, false));
         }
-        self.res.as_ref().map_err(|e| {
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                e.to_string(),
-            ))
-        })?;
+        self.res
+            .as_ref()
+            .map_err(|e| Box::new(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
         Ok(self)
     }
 
@@ -111,11 +113,15 @@ impl<'a> ParseResult<'a> {
     ///
     /// # Returns
     /// The original parsing result, allowing for further chaining if needed.
-    pub fn collect_rest(self, target: &mut Vec<String>) -> Result<(), Box<dyn Error>> {
-        let result = self.res;
-        if result.is_ok() {
-            target.extend(self.remaining);
+    pub fn collect_rest(mut self, target: &mut Vec<String>) -> Result<Self, Box<dyn Error>> {
+        if let Err(e) = &self.res {
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::Other,
+                e.to_string(),
+            )));
         }
-        result
+
+        target.extend(self.remaining.drain(..));
+        Ok(self)
     }
 }
