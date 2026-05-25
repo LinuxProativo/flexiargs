@@ -24,10 +24,10 @@ fn test_setup_parsing_success() -> Result<(), Box<dyn std::error::Error>> {
             Arg::value(None, "--mirror", "url", &mut mirror_url),
             Arg::value(Some("-R"), "--rootfs", "directory", &mut rootfs),
         ];
-
-        let help_rules = [];
+        
+        let opts = Default::default();
         let deque: VecDeque<String> = input_args.into();
-        parse_into_vars("setup", &mut rules, &help_rules, deque).ok()?;
+        parse_into_vars(&mut rules, deque, opts).ok()?;
     }
 
     assert!(edge);
