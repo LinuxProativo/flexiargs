@@ -25,6 +25,7 @@ pub struct ArgHelp<'a> {
     pub long: &'a str,
     /// A brief description of the argument's purpose.
     pub desc: &'a str,
+    pub meta: Option<&'a str>,
     /// Whether this item represents a subcommand.
     pub is_subcommand: bool,
     /// Optional application properties, usually defined for the main command.
@@ -45,6 +46,7 @@ impl<'a> ArgHelp<'a> {
             short: None,
             long: NULL_PTR,
             desc: NULL_PTR,
+            meta: None,
             is_subcommand: false,
             properties: Some(AppProperties {
                 name,
@@ -66,6 +68,7 @@ impl<'a> ArgHelp<'a> {
             short,
             long,
             desc,
+            meta: None,
             is_subcommand: false,
             properties: None,
             context: &[],
@@ -76,8 +79,13 @@ impl<'a> ArgHelp<'a> {
     ///
     /// # Arguments
     /// * `context` - A slice of subcommand names where this argument is valid.
-    pub const fn with_context(mut self, context: &'a [&'a str]) -> Self {
+    pub const fn context(mut self, context: &'a [&'a str]) -> Self {
         self.context = context;
+        self
+    }
+
+    pub const fn meta(mut self, meta: &'a str) -> Self {
+        self.meta = Some(meta);
         self
     }
 
@@ -92,6 +100,7 @@ impl<'a> ArgHelp<'a> {
             short,
             long,
             desc,
+            meta: None,
             is_subcommand: true,
             properties: None,
             context: &[],
