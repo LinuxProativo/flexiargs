@@ -48,12 +48,16 @@ mod help;
 mod into_result;
 mod messages;
 mod parse_result;
+mod options;
 
 /// Re-exports error reporting functions for invalid and missing arguments.
 pub use messages::{invalid_arg, missing_arg};
 
 /// Re-exports the help documentation structures and utilities.
 pub use help::ArgHelp;
+
+/// Re-exports the configuration structure used for argument parsing.
+pub use options::ParserOptions;
 
 /// Re-exports core parsing logic and argument rule definitions.
 pub use flexiargs::{Arg, NULL_PTR, parse_into_vars};
