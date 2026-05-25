@@ -115,7 +115,7 @@ pub(crate) fn print_help(
     is_all: bool,
 ) {
     let app_name = get_app_name();
-    let mut grouped: BTreeMap<&str, Vec<&ArgHelp>> = BTreeMap::new();
+    let has_subcommands = help_rules.iter().any(|h| h.is_subcommand);
 
     if let Some(p) = props {
         println!("{} - {}\n\n{}\n", app_name, p.name, p.desc);
@@ -123,12 +123,23 @@ pub(crate) fn print_help(
         println!("{}\n", app_name);
     }
 
+    let sub_place = if has_subcommands { "[SUBCOMMAND] " } else { "" };
+    let place = if sub.is_empty() {
+        sub_place
+    } else {
+        &format!("{} ", sub)
+    };
+    println!("Usage: {} {}[OPTIONS] [--] [ARGS...]", app_name, place);
+
     let act: Vec<&ArgHelp> = if is_all {
         help_rules.iter().collect()
     } else {
         help_rules
             .iter()
             .filter(|h| {
+                if h.is_subcommand {
+                    return true;
+                }
                 rules.iter().any(|r| {
                     let long_match = r.long.split('|').any(|part| part == h.long);
                     let short_match = match (h.short, r.short) {
@@ -137,57 +148,56 @@ pub(crate) fn print_help(
                         (Some(_), None) => false,
                     };
                     long_match && short_match
-                })
+                }) && (sub.is_empty() || h.context.contains(&sub) || h.context.is_empty())
             })
             .collect()
     };
 
-    let scmd: Vec<&ArgHelp> = act.iter().filter(|h| h.is_subcommand).cloned().collect();
-    let sub_place = if !scmd.is_empty() {
-        "[SUBCOMMAND] "
-    } else {
-        NULL_PTR
-    };
-    let place = if sub.is_empty() {
-        sub_place
-    } else {
-        &format!("{} ", sub)
-    };
-
-    println!("Usage: {} {}[OPTIONS]", app_name, place);
-
-    if !scmd.is_empty() {
-        println!("\nSubcommands:");
-        print_entries(&scmd);
-    }
-
-    for help in &act {
-        if help.is_subcommand {
-            continue;
+    if is_all {
+        let scmd: Vec<&ArgHelp> = help_rules.iter().filter(|h| h.is_subcommand).collect();
+        if !scmd.is_empty() {
+            println!("\nAvailable Subcommands:");
+            print_entries(&scmd);
         }
 
-        if !is_all || help.context.is_empty() {
-            grouped.entry("").or_default().push(help);
-        } else {
+        let mut grouped: BTreeMap<&str, Vec<&ArgHelp>> = BTreeMap::new();
+        for help in help_rules.iter().filter(|h| !h.is_subcommand) {
+            if help.context.is_empty() {
+                continue;
+            }
             for ctx in help.context {
                 grouped.entry(ctx).or_default().push(help);
             }
         }
-    }
 
-    for (ctx, items) in grouped {
-        let subs: Vec<_> = items.iter().filter(|i| i.is_subcommand).cloned().collect();
-        let opts: Vec<_> = items.iter().filter(|i| !i.is_subcommand).cloned().collect();
-
-        if !subs.is_empty() {
-            println!("\nSubcommands:");
-            print_entries(&subs);
+        for (ctx, items) in grouped {
+            println!("\nOptions for '{}':", ctx);
+            print_entries(&items);
         }
+    } else {
+        if sub.is_empty() {
+            let scmd: Vec<&ArgHelp> = act.iter().filter(|h| h.is_subcommand).cloned().collect();
+            if !scmd.is_empty() {
+                println!("\nAvailable Subcommands:");
+                print_entries(&scmd);
+            }
 
-        if !opts.is_empty() {
-            let text = &format!(" for '{}'", ctx);
-            println!("\nOptions{}:", if ctx.is_empty() { "" } else { text });
-            print_entries(&opts);
+            let opts: Vec<&ArgHelp> = act
+                .iter()
+                .filter(|h| !h.is_subcommand && !h.context.is_empty())
+                .cloned()
+                .collect();
+
+            if !opts.is_empty() {
+                println!("\nOptions:");
+                print_entries(&opts);
+            }
+        } else {
+            let opts: Vec<&ArgHelp> = act.iter().filter(|h| !h.is_subcommand).cloned().collect();
+            if !opts.is_empty() {
+                println!("\nOptions for '{}':", sub);
+                print_entries(&opts);
+            }
         }
     }
 
