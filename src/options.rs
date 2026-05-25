@@ -1,19 +1,22 @@
-//! todo
+//! # Parser Configuration
+//!
+//! Provides the configuration structure required to initialize and execute
+//! argument parsing operations within the FlexiArgs framework.
 
 use crate::ArgHelp;
 
-/// todo comentar
+/// Defines the operational parameters for the command-line argument parser.
 pub struct ParserOptions<'a> {
-    /// todo comentar
+    /// The name of the active subcommand, used for grouping and error reporting.
     pub subcommand: &'a str,
-    /// todo comentar
+    /// A reference to the slice of `ArgHelp` definitions for the current context.
     pub help_rules: &'a [ArgHelp<'a>],
-    /// todo comentar
+    /// If set to true, disables the automatic processing of `--help` and `--version` flags.
     pub ignore_help: bool,
 }
 
 impl<'a> Default for ParserOptions<'a> {
-    /// todo comentar
+    /// Creates a default `ParserOptions` instance with empty context and standard behavior.
     fn default() -> Self {
         Self {
             subcommand: "",
