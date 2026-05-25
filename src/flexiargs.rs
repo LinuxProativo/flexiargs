@@ -3,11 +3,11 @@
 //! This module defines the structures and functions necessary to map command-line
 //! arguments to application variables using a rule-based system.
 
-use crate::ArgHelp;
 use crate::help::print_help;
 use crate::into_result::IntoActionResult;
 use crate::messages::{invalid_arg, missing_arg, parse_value};
 use crate::parse_result::ParseResult;
+use crate::ParserOptions;
 use std::collections::VecDeque;
 use std::error::Error;
 use std::str::FromStr;
@@ -328,45 +328,46 @@ impl<'a> Arg<'a> {
 /// # Returns
 /// A `ParseResult` containing information about the success or failure of the operation.
 pub fn parse_into_vars<'a>(
-    subcommand: &'a str,
-    rules: &mut [Arg],
-    help_rules: &[ArgHelp<'a>],
+    rules: &mut [Arg<'a>],
     mut args: VecDeque<String>,
+    opts: ParserOptions<'a>
 ) -> ParseResult<'a> {
     let mut help_requested = false;
     let mut version_requested = false;
     let mut help_all_requested = false;
 
-    if let Some(arg) = args.front() {
-        if arg == "--help" || arg == "-h" {
-            help_requested = true;
-        } else if arg == "--version" || arg == "-V" {
-            version_requested = true;
-        } else if arg == "--help-all" {
-            help_all_requested = true;
-        }
-    }
-
-    if help_requested || version_requested || help_all_requested {
-        let props = help_rules.iter().find_map(|r| r.properties.as_ref());
-
-        if version_requested {
-            println!("{}", props.map(|p| p.version).unwrap_or("0.1.0"));
-        } else if help_all_requested {
-            print_help(subcommand, props, rules, help_rules, true);
-        } else {
-            print_help(subcommand, props, rules, help_rules, false);
+    if !opts.ignore_help {
+        if let Some(arg) = args.front() {
+            if arg == "--help" || arg == "-h" {
+                help_requested = true;
+            } else if arg == "--version" || arg == "-V" {
+                version_requested = true;
+            } else if arg == "--help-all" {
+                help_all_requested = true;
+            }
         }
 
-        return ParseResult {
-            sub: subcommand,
-            empty: true,
-            res: Ok(()),
-            remaining: VecDeque::new(),
-            arg_indices: Vec::new(),
-            essential_failed: false,
-            help_requested: true,
-        };
+        if help_requested || version_requested || help_all_requested {
+            let props = opts.help_rules.iter().find_map(|r| r.properties.as_ref());
+
+            if version_requested {
+                println!("{}", props.map(|p| p.version).unwrap_or("0.1.0"));
+            } else if help_all_requested {
+                print_help(opts.subcommand, props, rules, opts.help_rules, true);
+            } else {
+                print_help(opts.subcommand, props, rules, opts.help_rules, false);
+            }
+
+            return ParseResult {
+                sub: opts.subcommand,
+                empty: true,
+                res: Ok(()),
+                remaining: VecDeque::new(),
+                arg_indices: Vec::new(),
+                essential_failed: false,
+                help_requested: true,
+            };
+        }
     }
 
     let is_empty = args.is_empty();
@@ -408,14 +409,14 @@ pub fn parse_into_vars<'a>(
                     ArgAction::Bool(val) => **val = true,
                     ArgAction::RwLockBool(lock) => *lock.write().unwrap() = true,
                     ArgAction::Value(callback) => {
-                        callback(subcommand, r.error_name, &arg, &mut args)?;
+                        callback(opts.subcommand, r.error_name, &arg, &mut args)?;
                     }
                 }
             } else {
                 remaining.push_back(arg.clone());
                 arg_indices.push(current_idx);
                 if arg.starts_with('-') && arg != "-" {
-                    return Err(invalid_arg(subcommand, &arg));
+                    return Err(invalid_arg(opts.subcommand, &arg));
                 }
             }
         }
@@ -423,7 +424,7 @@ pub fn parse_into_vars<'a>(
     })();
 
     let mut parse_result = ParseResult {
-        sub: subcommand,
+        sub: opts.subcommand,
         empty: is_empty,
         res: result,
         remaining,
@@ -433,7 +434,7 @@ pub fn parse_into_vars<'a>(
     };
 
     if parse_result.res.is_ok() && parse_result.essential_failed {
-        parse_result.res = Err(missing_arg(subcommand, true));
+        parse_result.res = Err(missing_arg(opts.subcommand, true));
     }
 
     parse_result
