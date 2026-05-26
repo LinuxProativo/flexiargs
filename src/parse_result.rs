@@ -28,11 +28,6 @@ pub struct ParseResult<'a> {
 }
 
 impl<'a> ParseResult<'a> {
-    /// Returns true if the user requested help information.
-    pub fn help_requested(&self) -> bool {
-        self.help_requested
-    }
-
     /// Suppresses any existing parsing errors, resetting the result to `Ok(())`.
     /// Useful for optional parsing passes where errors should be ignored.
     pub fn passthrough(mut self) -> Self {
@@ -59,6 +54,8 @@ impl<'a> ParseResult<'a> {
             .map_err(|e| Box::new(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
         Ok(self)
     }
+
+    /// todo
     pub fn help_or_err(self) -> Result<bool, Box<dyn Error>> {
         if self.help_requested {
             return Ok(true);
