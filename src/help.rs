@@ -174,7 +174,7 @@ pub(crate) fn print_help(
         help_rules
             .iter()
             .filter(|h| {
-                if h.is_subcommand {
+                if h.is_subcommand || h.is_env {
                     return true;
                 }
                 rules.iter().any(|r| {
