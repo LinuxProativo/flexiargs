@@ -67,23 +67,4 @@ impl<'a> ParseResult<'a> {
     pub fn ok(self) -> Result<(), Box<dyn Error>> {
         self.res
     }
-
-    /// Collects remaining arguments into a provided vector.
-    ///
-    /// # Arguments
-    /// * `target` - Mutable reference to a vector where remaining arguments will be stored.
-    ///
-    /// # Returns
-    /// The original parsing result, allowing for further chaining if needed.
-    pub fn collect_rest(mut self, target: &mut Vec<String>) -> Result<Self, Box<dyn Error>> {
-        if let Err(e) = &self.res {
-            return Err(Box::new(io::Error::new(
-                io::ErrorKind::Other,
-                e.to_string(),
-            )));
-        }
-
-        target.extend(self.remaining.drain(..));
-        Ok(self)
-    }
 }
