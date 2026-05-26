@@ -13,6 +13,10 @@ pub struct ParserOptions<'a> {
     pub help_rules: &'a [ArgHelp<'a>],
     /// If set to true, disables the automatic processing of `--help` and `--version` flags.
     pub ignore_help: bool,
+    /// If true, unmatched arguments trigger an error.
+    pub strict: bool,
+    /// Optional depth level for strictness.
+    pub strict_level: Option<usize>,
 }
 
 impl<'a> Default for ParserOptions<'a> {
@@ -22,6 +26,8 @@ impl<'a> Default for ParserOptions<'a> {
             subcommand: "",
             help_rules: &[],
             ignore_help: false,
+            strict: true,
+            strict_level: None,
         }
     }
 }
