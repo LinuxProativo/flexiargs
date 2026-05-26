@@ -4,7 +4,7 @@
 //! It provides a fluent API for enforcing validation rules (strictness) and
 //! managing arguments that were not matched during the parsing phase.
 
-use crate::{invalid_arg, missing_arg};
+use crate::missing_arg;
 use std::collections::VecDeque;
 use std::error::Error;
 use std::io;
@@ -31,44 +31,6 @@ impl<'a> ParseResult<'a> {
     /// Returns true if the user requested help information.
     pub fn help_requested(&self) -> bool {
         self.help_requested
-    }
-
-    /// Zero-tolerance mode: Any unmatched argument in `remaining` will trigger an error.
-    pub fn strict(mut self) -> Self {
-        if self.res.is_err() && !self.essential_failed {
-            return self;
-        }
-
-        if let Some(arg) = self.remaining.front() {
-            self.res = Err(invalid_arg(self.sub, arg));
-        }
-        self
-    }
-
-    /// Invalidates unmatched arguments up to a specific input depth.
-    ///
-    /// # Arguments
-    /// * `n` - The positional threshold. Any unmatched argument at or before this position
-    ///         triggers an error. Arguments appearing after this position are allowed.
-    pub fn strict_level(mut self, n: usize) -> Self {
-        if self.res.is_err() && !self.essential_failed {
-            return self;
-        }
-
-        for (i, &pos) in self.arg_indices.iter().enumerate() {
-            if pos <= n {
-                if let Some(arg) = self.remaining.get(i) {
-                    self.res = Err(invalid_arg(self.sub, arg));
-                    break;
-                }
-            }
-        }
-        self
-    }
-
-    /// Shortcut for `strict_level(1)`. Ensures the first argument must match a rule.
-    pub fn strict_first(self) -> Self {
-        self.strict_level(1)
     }
 
     /// Suppresses any existing parsing errors, resetting the result to `Ok(())`.
