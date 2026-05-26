@@ -59,6 +59,17 @@ impl<'a> ParseResult<'a> {
             .map_err(|e| Box::new(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
         Ok(self)
     }
+    pub fn help_or_err(self) -> Result<bool, Box<dyn Error>> {
+        if self.help_requested {
+            return Ok(true);
+        }
+
+        self.res
+            .as_ref()
+            .map_err(|e| Box::new(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
+
+        Ok(false)
+    }
 
     /// Unwraps the inner result of the parsing operation.
     ///
