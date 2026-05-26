@@ -3,11 +3,11 @@
 //! This module defines the structures and functions necessary to map command-line
 //! arguments to application variables using a rule-based system.
 
+use crate::ParserOptions;
 use crate::help::print_help;
 use crate::into_result::IntoActionResult;
 use crate::messages::{invalid_arg, missing_arg, parse_value};
 use crate::parse_result::ParseResult;
-use crate::ParserOptions;
 use std::collections::VecDeque;
 use std::error::Error;
 use std::str::FromStr;
@@ -330,7 +330,7 @@ impl<'a> Arg<'a> {
 pub fn parse_into_vars<'a>(
     rules: &mut [Arg<'a>],
     mut args: VecDeque<String>,
-    opts: ParserOptions<'a>
+    opts: ParserOptions<'a>,
 ) -> ParseResult<'a> {
     let mut help_requested = false;
     let mut version_requested = false;
@@ -432,6 +432,23 @@ pub fn parse_into_vars<'a>(
         essential_failed: has_essentials && !essential_met && !is_empty,
         help_requested: false,
     };
+
+    if parse_result.res.is_ok() && opts.strict {
+        if let Some(level) = opts.strict_level {
+            for (i, &pos) in parse_result.arg_indices.iter().enumerate() {
+                if pos <= level {
+                    if let Some(arg) = parse_result.remaining.get(i) {
+                        parse_result.res = Err(invalid_arg(opts.subcommand, arg));
+                        break;
+                    }
+                }
+            }
+        } else {
+            if let Some(arg) = parse_result.remaining.front() {
+                parse_result.res = Err(invalid_arg(opts.subcommand, arg));
+            }
+        }
+    }
 
     if parse_result.res.is_ok() && parse_result.essential_failed {
         parse_result.res = Err(missing_arg(opts.subcommand, true));
