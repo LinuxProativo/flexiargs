@@ -4,50 +4,18 @@
 //! It provides a fluent API for enforcing validation rules (strictness) and
 //! managing arguments that were not matched during the parsing phase.
 
-use crate::missing_arg;
 use std::error::Error;
 use std::io;
 
 /// Holds the outcome of the parsing operation.
-pub struct ParseResult<'a> {
-    /// The subcommand name used for context in errors.
-    pub sub: &'a str,
-    /// Indicates if the input argument queue was empty.
-    pub empty: bool,
+pub struct ParseResult {
     /// The result of the parsing loop.
     pub res: Result<(), Box<dyn Error>>,
     /// Indicates if the help flag was requested by the user.
     pub help_requested: bool,
 }
 
-impl<'a> ParseResult<'a> {
-    /// Suppresses any existing parsing errors, resetting the result to `Ok(())`.
-    /// Useful for optional parsing passes where errors should be ignored.
-    pub fn passthrough(mut self) -> Self {
-        if let Err(_) = self.res {
-            self.res = Ok(());
-        }
-        self
-    }
-
-    /// Ensures that at least one argument was provided.
-    ///
-    /// # Returns
-    /// An error if the input was empty, otherwise returns the parsing result.
-    pub fn require_args(self) -> Result<Self, Box<dyn Error>> {
-        if self.help_requested {
-            return Ok(self);
-        }
-
-        if self.empty {
-            return Err(missing_arg(self.sub, false));
-        }
-        self.res
-            .as_ref()
-            .map_err(|e| Box::new(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
-        Ok(self)
-    }
-
+impl ParseResult {
     /// Checks if help was requested and validates the parsing result.
     ///
     /// # Returns
