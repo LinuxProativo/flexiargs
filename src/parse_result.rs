@@ -5,7 +5,6 @@
 //! managing arguments that were not matched during the parsing phase.
 
 use crate::missing_arg;
-use std::collections::VecDeque;
 use std::error::Error;
 use std::io;
 
@@ -17,12 +16,6 @@ pub struct ParseResult<'a> {
     pub empty: bool,
     /// The result of the parsing loop.
     pub res: Result<(), Box<dyn Error>>,
-    /// Arguments that were not matched by any rule or followed '--'.
-    pub remaining: VecDeque<String>,
-    /// The original input positions of the arguments stored in `remaining`.
-    pub arg_indices: Vec<usize>,
-    /// Internal flag indicating if a core parameter was missing.
-    pub essential_failed: bool,
     /// Indicates if the help flag was requested by the user.
     pub help_requested: bool,
 }
