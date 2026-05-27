@@ -221,7 +221,7 @@ pub(crate) fn print_help(
 
             let opts: Vec<&ArgHelp> = act
                 .iter()
-                .filter(|h| !h.is_subcommand && !h.context.is_empty())
+                .filter(|h| !h.is_subcommand && !h.is_env && !h.context.is_empty())
                 .cloned()
                 .collect();
 
@@ -230,7 +230,12 @@ pub(crate) fn print_help(
                 print_entries(&opts);
             }
         } else {
-            let opts: Vec<&ArgHelp> = act.iter().filter(|h| !h.is_subcommand).cloned().collect();
+            let opts: Vec<&ArgHelp> = act
+                .iter()
+                .filter(|h| !h.is_subcommand && !h.is_env)
+                .cloned()
+                .collect();
+
             if !opts.is_empty() {
                 println!("\nOptions for '{}':", sub);
                 print_entries(&opts);
