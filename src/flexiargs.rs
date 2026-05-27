@@ -427,14 +427,6 @@ pub fn parse_into_vars<'a>(
         Ok(())
     })();
 
-    if result.is_ok() && opts.require_args && is_empty {
-        result = Err(missing_arg(opts.subcommand, false));
-    }
-
-    if result.is_ok() && has_essentials && !essential_met && !is_empty {
-        result = Err(missing_arg(opts.subcommand, true));
-    }
-
     if result.is_ok() && opts.strict {
         if let Some(level) = opts.strict_level {
             for (i, &pos) in arg_indices.iter().enumerate() {
@@ -448,6 +440,14 @@ pub fn parse_into_vars<'a>(
         } else if let Some(arg) = remaining.front() {
             result = Err(invalid_arg(opts.subcommand, arg));
         }
+    }
+
+    if result.is_ok() && opts.require_args && is_empty {
+        result = Err(missing_arg(opts.subcommand, false));
+    }
+
+    if result.is_ok() && has_essentials && !essential_met && !is_empty {
+        result = Err(missing_arg(opts.subcommand, true));
     }
 
     if opts.passthrough && result.is_err() {
