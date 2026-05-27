@@ -17,6 +17,8 @@ pub struct ParserOptions<'a> {
     pub strict: bool,
     /// Optional depth level for strictness.
     pub strict_level: Option<usize>,
+    /// If provided, remaining arguments are collected here automatically.
+    pub collect_args: Option<&'a mut Vec<String>>,
 }
 
 impl<'a> Default for ParserOptions<'a> {
@@ -28,6 +30,7 @@ impl<'a> Default for ParserOptions<'a> {
             ignore_help: false,
             strict: true,
             strict_level: None,
+            collect_args: None,
         }
     }
 }
