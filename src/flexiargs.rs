@@ -212,19 +212,23 @@ impl<'a> Arg<'a> {
         }
     }
 
-    /// Creates a new value rule specifically for Option<String>.
+    /// Creates a new value rule for any type implementing FromStr (e.g., Option<String>, Option<PathBuf>).
     ///
     /// # Arguments
     /// * `s` - Short flag.
     /// * `l` - Long flag.
     /// * `err` - Name of the value for error reporting.
-    /// * `target` - Mutable reference to the Option to be populated.
-    pub fn option(
+    /// * `target` - Mutable reference to the Option<T> to be populated.
+    pub fn option<T>(
         s: Option<&'a str>,
         l: &'a str,
         err: &'a str,
-        target: &'a mut Option<String>,
-    ) -> Self {
+        target: &'a mut Option<T>,
+    ) -> Self
+    where
+        T: FromStr + 'a,
+        T::Err: Error + 'static,
+    {
         let closure = move |sub: &str, val_name: &str, arg: &str, args: &mut VecDeque<String>| {
             let next = args.front().map(|s| s.as_str());
             let extracted = parse_value(sub, val_name, arg, next).map_err(|e| {
@@ -235,9 +239,14 @@ impl<'a> Arg<'a> {
                 args.pop_front();
             }
 
-            *target = Some(extracted);
+            *target = Some(
+                extracted
+                    .parse()
+                    .map_err(|e| Box::new(e) as Box<dyn Error>)?,
+            );
             Ok(())
         };
+
         Self {
             short: s,
             long: l,
