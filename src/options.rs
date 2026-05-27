@@ -3,7 +3,7 @@
 //! Provides the configuration structure required to initialize and execute
 //! argument parsing operations within the FlexiArgs framework.
 
-use crate::ArgHelp;
+use crate::{ArgHelp, NULL_PTR};
 
 /// Defines the operational parameters for the command-line argument parser.
 pub struct ParserOptions<'a> {
@@ -19,18 +19,24 @@ pub struct ParserOptions<'a> {
     pub strict_level: Option<usize>,
     /// If provided, remaining arguments are collected here automatically.
     pub collect_args: Option<&'a mut Vec<String>>,
+    /// If true, suppresses parsing errors, returning Ok(()) even if parsing fails.
+    pub passthrough: bool,
+    /// If true, ensures that at least one argument was provided (non-empty input).
+    pub require_args: bool,
 }
 
 impl<'a> Default for ParserOptions<'a> {
     /// Creates a default `ParserOptions` instance with empty context and standard behavior.
     fn default() -> Self {
         Self {
-            subcommand: "",
+            subcommand: NULL_PTR,
             help_rules: &[],
             ignore_help: false,
             strict: true,
             strict_level: None,
             collect_args: None,
+            passthrough: false,
+            require_args: false,
         }
     }
 }
