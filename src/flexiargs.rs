@@ -371,9 +371,6 @@ pub fn parse_into_vars<'a>(
                 sub: opts.subcommand,
                 empty: true,
                 res: Ok(()),
-                remaining: VecDeque::new(),
-                arg_indices: Vec::new(),
-                essential_failed: false,
                 help_requested: true,
             };
         }
@@ -432,35 +429,37 @@ pub fn parse_into_vars<'a>(
         Ok(())
     })();
 
+    let essential_failed = has_essentials && !essential_met && !is_empty;
     let mut parse_result = ParseResult {
         sub: opts.subcommand,
         empty: is_empty,
         res: result,
-        remaining,
-        arg_indices,
-        essential_failed: has_essentials && !essential_met && !is_empty,
         help_requested: false,
     };
 
     if parse_result.res.is_ok() && opts.strict {
         if let Some(level) = opts.strict_level {
-            for (i, &pos) in parse_result.arg_indices.iter().enumerate() {
+            for (i, &pos) in arg_indices.iter().enumerate() {
                 if pos <= level {
-                    if let Some(arg) = parse_result.remaining.get(i) {
+                    if let Some(arg) = remaining.get(i) {
                         parse_result.res = Err(invalid_arg(opts.subcommand, arg));
                         break;
                     }
                 }
             }
         } else {
-            if let Some(arg) = parse_result.remaining.front() {
+            if let Some(arg) = remaining.front() {
                 parse_result.res = Err(invalid_arg(opts.subcommand, arg));
             }
         }
     }
 
-    if parse_result.res.is_ok() && parse_result.essential_failed {
+    if parse_result.res.is_ok() && essential_failed {
         parse_result.res = Err(missing_arg(opts.subcommand, true));
+    }
+
+    if let Some(target) = opts.collect_args {
+        target.extend(remaining.drain(..));
     }
 
     parse_result
