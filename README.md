@@ -121,7 +121,7 @@ Add the crate to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-flexiargs = "1.0"
+flexiargs = "2.0"
 ```
 
 ## 🌐 Public API
@@ -130,22 +130,25 @@ The crate intentionally exposes a very small API surface:
 
 ```rust
 pub use messages::{invalid_arg, missing_arg};
-pub use flexiargs::{Arg, parse_into_vars};
+pub use help::ArgHelp;
+pub use options::ParserOptions;
+pub use flexiargs::{Arg, NULL_PTR, parse_into_vars};
 ```
 
 ### 🚪 Main Entry Points
 
-| Item | Description |
-|---|---|
-| `Arg` | Defines parsing rules |
-| `parse_into_vars` | Executes parsing |
-| `invalid_arg` | Standardized invalid argument error |
-| `missing_arg` | Standardized missing parameter error |
+| Item              | Description                           |
+|-------------------|---------------------------------------|
+| `Arg`             | Defines parsing rules                 |
+| `parse_into_vars` | Executes parsing with `ParserOptions` |
+| `ParserOptions`   | Configuration for parsing behavior    |
+| `invalid_arg`     | Standardized invalid argument error   |
+| `missing_arg`     | Standardized missing parameter error  |
 
 ## 🚀 Quick Example
 
 ```rust
-use flexiargs::{Arg, parse_into_vars};
+use flexiargs::{Arg, parse_into_vars, ParserOptions};
 use std::collections::VecDeque;
 
 let mut sync_mode = false;
@@ -153,6 +156,11 @@ let mut packages = Vec::new();
 let mut cache_dir = String::new();
 let mut config_file: Option<String> = None;
 let mut use_overlay = true;
+
+let opts = ParserOptions {
+subcommand: "aports",
+..Default::default()
+};
 
 let mut rules = [
     Arg::bool(Some("-S"), "--sync", &mut sync_mode),
@@ -170,9 +178,8 @@ let args = VecDeque::from(vec![
     "--disable-overlay".to_string()
 ]);
 
-parse_into_vars("aports", &mut rules, args).ok();
+parse_into_vars(&mut rules, args, opts).ok();
 drop(rules);
-
 
 println!("Sync: {}", sync_mode);
 println!("Packages: {:?}", packages);
@@ -382,96 +389,65 @@ Arg::rw_set(
     &MODE
 );
 ```
+
+## 🌍 Environment Variables
+
+`flexiargs` supports documentation and parsing of environment variables,
+allowing configuration via the environment.
+
+```rust
+Arg::env("ALPACK_ARCH", "Define the target architecture for rootfs"),
+```
+
 ## 🔍 Parsing
 
 Parsing in flexiargs is explicit, deterministic, and fully rule-driven. Each step of
 the parsing process is defined by clear rules that transform raw command-line input
-into structured, validated, and typed data. This makes behavior predictable, easier
-to debug, and consistent across different CLI designs.
+into structured, validated, and typed data.
 
 ### 📥 Basic Parsing
 
 ```rust
-parse_into_vars(
-    "server",
-    &mut rules,
-    args
-).ok()?;
+let opts = ParserOptions {
+subcommand: "server",
+..Default::default()
+};
+
+parse_into_vars(&mut rules, args, opts).ok()?;
 ```
 
 ## 📦 ParseResult
 
-The parser returns a `ParseResult`.
+The parser returns a `ParseResult`. This structure provides a clean,
+streamlined interface for controlling your CLI's execution flow:
 
-This provides:
+- ✅ **Result Handling**: Encapsulates the success or failure of the parsing logic.
+- 🛟 **Automatic Help/Version**: Handles `--help`, `--version`, and `--help-all`
+  automatically, including output generation and exit state tracking.
+- 🔒 **Execution Flow**: Provides a fluent API to bridge the gap between
+  parsing and your main application logic.
 
-- ✅ Parsing success/failure;
-- 📦 Unmatched arguments;
-- 📍 Positional handling;
-- 🔒 Strict validation helpers;
+### ✅ .help_or_err()
 
-### ✅ `.ok()`
-
-Extracts the parsing result.
+The primary method to control execution flow. It automatically handles help
+flags, returns errors if parsing failed, and indicates if the application
+should exit after showing help.
 
 ```rust
-parse_into_vars("app", &mut rules, args)
-    .ok()?;
+match parse_into_vars(&mut rules, args, opts).help_or_err() {
+    Ok(true) => return Ok(()), // Help was shown, exit gracefully
+    Ok(false) => { /* Continue execution */ }
+    Err(e) => return Err(e),   // Parsing error occurred
+}
 ```
 
-### 🔒 `.strict()`
+### 🔓 .ok()
 
-Rejects any unmatched arguments.
-
-```rust
-parse_into_vars("app", &mut rules, args)
-    .strict()
-    .ok()?;
-```
-
-### 🥇 `.strict_first()`
-
-Ensures the first argument matches a rule.
+Extracts the raw parsing result, useful if you need to handle the
+`Result<(), Box<dyn Error>>` manually without the built-in help/error logic.
 
 ```rust
-.strict_first()
-```
-
-### 📏 `.strict_level(n)`
-
-Rejects unmatched arguments up to a given depth.
-
-```rust
-.strict_level(2)
-```
-
-### 🪶 `.passthrough()`
-
-Suppresses parsing errors.
-
-Useful for optional parsing stages.
-
-```rust
-.passthrough()
-```
-
-### 📌 `.require_args()`
-
-Fails if no arguments were supplied.
-
-```rust
-.require_args()?
-```
-
-### 📦 `.collect_rest()`
-
-Collects unmatched positional arguments.
-
-```rust
-let mut remaining = Vec::new();
-
-parse_into_vars("app", &mut rules, args)
-    .collect_rest(&mut remaining)?;
+parse_into_vars(&mut rules, args, opts).ok()?;
 ```
 
 ## 📍 Positional Arguments
@@ -536,14 +512,135 @@ Argument matching in flexiargs is designed to be both flexible and explicit.
 Instead of enforcing a single naming convention, it allows multiple identifiers
 and aliases per argument while keeping resolution deterministic and rule-based.
 
+## ⚙️ ParserOptions
+
+`ParserOptions` is the central configuration structure for `flexiargs`. It replaces
+direct function parameters with a robust, extensible configuration object,
+allowing you to fine-tune parsing behavior, validation rules, and context.
+
+### 📝 Definition
+
+```rust
+pub struct ParserOptions<'a> {
+    /// The name of the subcommand being parsed, used for error messages.
+    pub subcommand: &'a str,
+    /// If true, unknown arguments will trigger an error.
+    pub strict: bool,
+    /// Rejects unmatched arguments up to a specific depth (if Some).
+    pub strict_level: Option<usize>,
+    /// If true, ignores help/version flags and treats them as standard arguments.
+    pub ignore_help: bool,
+    /// If true, suppresses parsing errors, allowing unmatched args to pass through.
+    pub passthrough: bool,
+    /// Fails the parsing process if no arguments were supplied.
+    pub require_args: bool,
+    /// A mutable reference to collect unmatched positional arguments.
+    pub collect_args: Option<&'a mut VecDeque<String>>,
+    /// A list of help rules for automated documentation.
+    pub help_rules: &'a [ArgHelp<'a>],
+}
+```
+
+### 💡 Why use ParserOptions?
+
+- **Centralized Control:** Configure all parsing aspects (strictness, collection, 
+  requirements) in one place before invoking `parse_into_vars`.
+- **Cleaner API:** Keeps the `parse_into_vars` signature stable even as you add new features.
+- **Fluent Setup:** Easily derive from `Default` and override only the fields you need.
+
+### 🚀 Usage Example
+
+```rust
+let mut remaining = VecDeque::new();
+
+let opts = ParserOptions {
+    subcommand: "profile",
+    strict: true,
+    require_args: true,
+    collect_args: Some(&mut remaining),
+    ..Default::default()
+};
+
+parse_into_vars(&mut rules, args, opts).help_or_err()?;
+```
+
+## 🤖 AutoHelp System
+
+`flexiargs` provides an automated help generation system that maps your defined rules
+and metadata into a structured, readable documentation output. Instead of maintaining
+a separate manual, you define the application properties and command context directly
+in your code.
+
+### 📦 App Properties
+
+Defines the core metadata for the application, such as name, version, and a brief description.
+
+```rust
+ArgHelp::properties(
+    "ALPack", 
+    "A flexible package manager utility", 
+    "1.2.0"
+);
+```
+
+### 🛠️ Subcommand Definition
+
+Documents a subcommand. Use this to organize complex CLI tools into logical groups.
+
+```rust
+ArgHelp::subcommand(
+    None,
+    "profile",
+    "Manage system profiles"
+);
+```
+
+### 📄 Argument Documentation
+
+Documents a specific argument. You can add metadata strings (like `<DIR>`) to improve clarity.
+
+```rust
+ArgHelp::arg(
+    Some("-r"),
+    "--rootfs",
+    "Specify rootfs directory"
+)
+.meta("<DIR>");
+```
+
+### 🌍 Environment Variable Documentation
+
+Documents environment variables that influence the application behavior, ensuring they
+appear in the generated help output.
+
+
+```rust
+ArgHelp::env(
+    "ALPACK_ARCH",
+    "Define the target architecture for rootfs"
+);
+```
+
+### 📍 Contextual Grouping
+
+Limits the visibility of an argument to specific subcommands. This is essential
+when generating full help outputs with `--help-all`.
+
+```rust
+ArgHelp::arg(
+    Some("-c"),
+    "--config",
+    "Path to config file"
+)
+.context(&["profile", "setup"]);
+```
+
 ## 🤝 Contributing
 
 Contributions, improvements, and issue reports are welcome.
 
 ### 🚧 Possible Future Extensions
 
-- 🤖 Auto-help generation
-- 🌎 Environment variable integration
 - 🐚 Shell completion generation
 
 ## 📜 MIT License

@@ -1,3 +1,15 @@
+Wed May 27 12:52:38 -03 2026:
+    - Implemented auto_help functionality for automatic documentation generation.
+    - Added NULL_PTR constant (&str) for cleaner argument configuration and placeholder management.
+    - Updated collect_rest to return self, enabling fluent API chaining.
+    - Refined require_args logic for more consistent input validation.
+    - Introduced environment variable support in the argument parsing system.
+    - Added options module to transition configuration from function calls to ParserOptions struct.
+    - Moved strict validation setting to ParserOptions.
+    - Moved collect_rest configuration to ParserOptions.
+    - Updated Arg::option to support PathBuf and other FromStr-compatible types.
+    - Moved passthrough configuration to ParserOptions.
+    - Moved require_args configuration to ParserOptions.
 Sat May 16 13:33:02 -03 2026:
     - Fixed a conflict where missing essential arguments incorrectly masked strict validation errors.
 Fri May 15 11:05:59 -03 2026:
