@@ -48,7 +48,12 @@ impl<'a> ParseResult<'a> {
         Ok(self)
     }
 
-    /// todo
+    /// Checks if help was requested and validates the parsing result.
+    ///
+    /// # Returns
+    /// * `Ok(true)` - If help was requested by the user.
+    /// * `Ok(false)` - If parsing was successful and no help was requested.
+    /// * `Err(Box<dyn Error>)` - If a parsing error occurred.
     pub fn help_or_err(self) -> Result<bool, Box<dyn Error>> {
         if self.help_requested {
             return Ok(true);
